@@ -1,0 +1,229 @@
+--// Services
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local Workspace = game:GetService("Workspace")
+
+--// Player References
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
+local animator = humanoid:FindFirstChildOfClass("Animator") or humanoid:WaitForChild("Animator")
+local head = character:WaitForChild("Head")
+local camera = Workspace.CurrentCamera
+
+local originalCameraSubject = camera.CameraSubject
+local cameraFollowing = false
+
+-- Store default movement values
+local defaultWalkSpeed = humanoid.WalkSpeed
+local defaultJumpPower = humanoid.JumpPower
+
+--// Animation and Sound IDs
+local animations = {
+    Subterfuge = "rbxassetid://87482480949358",
+    MissTheQuiet = "rbxassetid://100986631322204",
+    Shucks = "rbxassetid://74238051754912",
+    HakariDance = "rbxassetid://138019937280193",
+    SillyBilly = "rbxassetid://107464355830477"
+}
+
+local sounds = {
+    Subterfuge = "rbxassetid://132297506693854",
+    MissTheQuiet = "rbxassetid://131936418953291",
+    Shucks = "rbxassetid://123236721947419",
+    HakariDance = "rbxassetid://87166578676888",
+    SillyBilly = "rbxassetid://77601084987544"
+}
+
+--// Convert animation/sound IDs into usable objects
+local animationObjects = {}
+local soundObjects = {}
+
+for name, id in pairs(animations) do
+    local anim = Instance.new("Animation")
+    anim.AnimationId = id
+    animationObjects[name] = anim
+end
+
+for name, id in pairs(sounds) do
+    local sound = Instance.new("Sound", head)
+    sound.SoundId = id
+    sound.Volume = 2
+    sound.Looped = true
+    sound.RollOffMode = Enum.RollOffMode.Linear
+    sound.MaxDistance = 50
+    soundObjects[name] = sound
+end
+
+local activeAnimationTrack, activeSound
+
+--// Camera Handling
+local function startFollowingHead()
+    if not cameraFollowing then
+        cameraFollowing = true
+        camera.CameraSubject = head
+    end
+end
+
+local function stopFollowingHead()
+    cameraFollowing = false
+    camera.CameraSubject = originalCameraSubject
+end
+
+--// Movement Control
+local function disableMovement()
+    humanoid.WalkSpeed = 0
+    humanoid.JumpPower = 0
+    humanoid:SetStateEnabled(Enum.HumanoidStateType.Running, false)
+    humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, false)
+end
+
+local function enableMovement()
+    humanoid.WalkSpeed = defaultWalkSpeed
+    humanoid.JumpPower = defaultJumpPower
+    humanoid:SetStateEnabled(Enum.HumanoidStateType.Running, true)
+    humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, true)
+end
+
+--// Animation System
+local function playAnimation(animationName)
+    if animator then
+        if activeAnimationTrack then activeAnimationTrack:Stop() end
+        if activeSound then activeSound:Stop() end
+
+        disableMovement()
+        startFollowingHead()
+
+        activeAnimationTrack = animator:LoadAnimation(animationObjects[animationName])
+        activeAnimationTrack:Play()
+
+        activeSound = soundObjects[animationName]
+        activeSound:Play()
+
+        -- Enable movement again once animation stops
+        activeAnimationTrack.Stopped:Connect(function()
+            enableMovement()
+            stopFollowingHead()
+        end)
+    end
+end
+
+local function stopAnimation()
+    if activeAnimationTrack then activeAnimationTrack:Stop() end
+    if activeSound then activeSound:Stop() end
+    enableMovement()
+    stopFollowingHead()
+end
+
+--// Create a styled button with hover and click functionality
+local function createButton(parent, text, pos, color, onClick)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0.8, 0, 0.12, 0)
+    btn.Position = pos
+    btn.Text = text
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.BackgroundColor3 = color
+    btn.BackgroundTransparency = 0.3
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 16
+    btn.AutoButtonColor = false
+    btn.Parent = parent
+
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+
+    btn.MouseEnter:Connect(function()
+        btn.BackgroundTransparency = 0.15
+    end)
+    btn.MouseLeave:Connect(function()
+        btn.BackgroundTransparency = 0.3
+    end)
+
+    btn.MouseButton1Click:Connect(onClick)
+    return btn
+end
+
+--// GUI Setup
+local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+local frame = Instance.new("Frame", gui)
+frame.Size = UDim2.new(0, 220, 0, 300)
+frame.Position = UDim2.new(0.5, -110, 0.5, -150)
+frame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+frame.BackgroundTransparency = 0.6
+frame.Active = true
+frame.Draggable = true
+
+-- Rounded corners for main frame
+Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 12)
+
+-- Add white border using a stroke
+local stroke = Instance.new("UIStroke", frame)
+stroke.Thickness = 1
+stroke.Color = Color3.new(1,1,1)
+stroke.Transparency = 0.25
+
+-- Glass-like gradient overlay
+local gradient = Instance.new("UIGradient", frame)
+gradient.Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(255,255,255)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(200,200,200))
+}
+gradient.Transparency = NumberSequence.new{
+    NumberSequenceKeypoint.new(0, 0.25),
+    NumberSequenceKeypoint.new(1, 0.5)
+}
+
+-- Drop shadow image
+local shadow = Instance.new("ImageLabel", frame)
+shadow.Image = "rbxassetid://301526481"
+shadow.BackgroundTransparency = 1
+shadow.Size = UDim2.new(1, 20, 1, 20)
+shadow.Position = UDim2.new(0, -10, 0, -10)
+shadow.ZIndex = 0
+
+-- Close GUI button
+local close = Instance.new("TextButton", frame)
+close.Size = UDim2.new(0, 25, 0, 25)
+close.Position = UDim2.new(1, -30, 0, 5)
+close.Text = "X"
+close.TextColor3 = Color3.fromRGB(255,255,255)
+close.BackgroundColor3 = Color3.fromRGB(255,50,50)
+close.Font = Enum.Font.GothamBold
+close.TextSize = 16
+Instance.new("UICorner", close).CornerRadius = UDim.new(0, 5)
+close.MouseButton1Click:Connect(function()
+    frame.Visible = false
+end)
+
+-- Create emote buttons
+createButton(frame, "Subterfuge", UDim2.new(0.1, 0, 0.1, 0), Color3.fromRGB(0, 90, 180), function()
+    playAnimation("Subterfuge")
+end)
+
+createButton(frame, "Miss The Quiet", UDim2.new(0.1, 0, 0.24, 0), Color3.fromRGB(90, 90, 255), function()
+    playAnimation("MissTheQuiet")
+end)
+
+createButton(frame, "Shucks", UDim2.new(0.1, 0, 0.38, 0), Color3.fromRGB(255, 165, 0), function()
+    playAnimation("Shucks")
+end)
+
+createButton(frame, "Immortality Dance", UDim2.new(0.1, 0, 0.52, 0), Color3.fromRGB(0, 255, 100), function()
+    playAnimation("HakariDance")
+end)
+
+createButton(frame, "Silly Billy", UDim2.new(0.1, 0, 0.66, 0), Color3.fromRGB(255, 105, 180), function()
+    playAnimation("SillyBilly")
+end)
+
+createButton(frame, "Stop Emote", UDim2.new(0.1, 0, 0.80, 0), Color3.fromRGB(255, 50, 50), stopAnimation)
+
+-- Bottom credit label
+local credit = Instance.new("TextLabel", frame)
+credit.Size = UDim2.new(0.8, 0, 0.08, 0)
+credit.Position = UDim2.new(0.1, 0, 0.92, 0)
+credit.Text = "REWORKED BY JINO ✨"
+credit.TextColor3 = Color3.fromRGB(255,255,255)
+credit.BackgroundTransparency = 1
+credit.Font = Enum.Font.GothamBold
+credit.TextSize = 14
+credit.TextXAlignment = Enum.TextXAlignment.Center
