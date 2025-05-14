@@ -221,7 +221,7 @@ createButton(frame, "Stop Emote", UDim2.new(0.1, 0, 0.80, 0), Color3.fromRGB(255
 local credit = Instance.new("TextLabel", frame)
 credit.Size = UDim2.new(0.8, 0, 0.08, 0)
 credit.Position = UDim2.new(0.1, 0, 0.92, 0)
-credit.Text = "REWORKED BY JINO ✨"
+credit.Text = "REWORKED BY JINO, MAKE BY ICE ✨"
 credit.TextColor3 = Color3.fromRGB(255,255,255)
 credit.BackgroundTransparency = 1
 credit.Font = Enum.Font.GothamBold
